@@ -6,11 +6,6 @@ const Chat = require("../models/chatModel");
 const sendMessage = asyncHandler(async (req, res) => {
   const { content, chatId } = req.body;
 
-  if (!content || !chatId) {
-    res.status(400);
-    throw new Error("Invalid data");
-  }
-
   let message = await Message.create({
     sender: req.user._id,
     content,
@@ -20,13 +15,13 @@ const sendMessage = asyncHandler(async (req, res) => {
   message = await message.populate("sender", "name pic");
   message = await message.populate("chat");
 
- await Chat.findByIdAndUpdate(
-   chatId,
-   {
-     latestMessage: message._id,
-   },
-   { new: true }
- );
+  await Chat.findByIdAndUpdate(chatId, {
+    latestMessage: message._id,
+  });
+
+  // SOCKET EVENT
+  const io = req.app.get("io");
+  io.to(chatId).emit("message received", message);
 
   res.status(201).json(message);
 });

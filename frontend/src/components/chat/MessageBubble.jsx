@@ -2,8 +2,12 @@ import { getUser } from "../../utils/auth";
 
 const MessageBubble = ({ message }) => {
   const loggedUser = getUser();
-
   const isOwn = message.sender?._id === loggedUser?._id;
+
+  const time = new Date(message.createdAt).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   return (
     <div
@@ -11,7 +15,8 @@ const MessageBubble = ({ message }) => {
         ${isOwn ? "bg-green-200 ml-auto text-right" : "bg-white mr-auto"}
       `}
     >
-      {message.content}
+      <p>{message.content}</p>
+      <span className="text-[10px] text-gray-500 mt-1 block">{time}</span>
     </div>
   );
 };

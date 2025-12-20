@@ -3,6 +3,8 @@ import { fetchChats } from "../api/chatApi";
 import { useChat } from "../context/ChatContext";
 import Sidebar from "../components/chat/Sidebar";
 import ChatWindow from "../components/chat/ChatWindow";
+import { getUser } from "../utils/auth";
+import { socket } from "../socket";
 
 function ChatPage() {
   const { setChats } = useChat();
@@ -24,6 +26,13 @@ function ChatPage() {
 
     return () =>clearInterval(interval);
   }, [setChats]);
+
+  useEffect(() => {
+    const user = getUser();
+    if (user) {
+      socket.emit("setup", user._id);
+    }
+  }, []);
 
   return (
     <div className="h-screen w-full flex bg-gray-100 overflow-hidden">

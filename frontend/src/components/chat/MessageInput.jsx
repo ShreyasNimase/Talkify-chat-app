@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { sendMessage } from "../../api/messageApi";
 import { getUser } from "../../utils/auth";
 import { useChat } from "../../context/ChatContext";
+import { socket } from "../../socket";
 
 const MessageInput = ({ chatId }) => {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+
+  const typingTimeoutRef = useRef(null);
 
   const { setMessagesMap, setChats } = useChat();
   const user = getUser();
@@ -13,12 +16,10 @@ const MessageInput = ({ chatId }) => {
   const handleSend = async (e) => {
     e.preventDefault();
 
-    // 🛡️ Safety checks
     if (!text.trim() || !chatId || sending || !user) return;
 
     const tempId = `temp-${Date.now()}`;
 
-    // 🔥 OPTIMISTIC MESSAGE (shown immediately)
     const optimisticMessage = {
       _id: tempId,
       content: text,
@@ -28,13 +29,12 @@ const MessageInput = ({ chatId }) => {
       __optimistic: true,
     };
 
-    // Optimistically add message to UI
+    // Optimistic UI
     setMessagesMap((prev) => ({
       ...prev,
       [chatId]: [...(prev[chatId] || []), optimisticMessage],
     }));
 
-    // Optimistically update chat list preview
     setChats((prev) =>
       prev.map((c) =>
         c._id === chatId
@@ -54,10 +54,8 @@ const MessageInput = ({ chatId }) => {
     setSending(true);
 
     try {
-      // API call to save message
       const savedMessage = await sendMessage(chatId, text);
 
-      // Replace optimistic message with real one
       setMessagesMap((prev) => ({
         ...prev,
         [chatId]: prev[chatId].map((m) =>
@@ -65,7 +63,6 @@ const MessageInput = ({ chatId }) => {
         ),
       }));
 
-      // Sync latestMessage with backend response
       setChats((prev) =>
         prev.map((c) =>
           c._id === chatId
@@ -77,10 +74,12 @@ const MessageInput = ({ chatId }) => {
             : c
         )
       );
+
+      // stop typing immediately on send
+      socket.emit("stop typing", chatId);
     } catch (error) {
       console.error("Message send failed:", error);
 
-      // Rollback optimistic message on failure
       setMessagesMap((prev) => ({
         ...prev,
         [chatId]: prev[chatId].filter((m) => m._id !== tempId),
@@ -88,6 +87,21 @@ const MessageInput = ({ chatId }) => {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleTyping = (e) => {
+    setText(e.target.value);
+
+    socket.emit("typing", chatId);
+
+    // reset timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("stop typing", chatId);
+    }, 1000);
   };
 
   return (
@@ -99,7 +113,7 @@ const MessageInput = ({ chatId }) => {
         type="text"
         placeholder="Type a message"
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={handleTyping}
         className="flex-1 px-4 py-2 rounded-lg bg-gray-100 outline-none"
       />
 

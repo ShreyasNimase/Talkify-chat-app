@@ -5,7 +5,7 @@ import HomePage from "./Pages/HomePage";
 import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
 import AuthPage from "./pages/Auth/AuthPage";
-import ChatPage from "./Pages/ChatPage";
+import ChatPage from "./pages/ChatPage";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuthRedirect from "./components/AuthRedirect";
