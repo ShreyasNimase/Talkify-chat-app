@@ -16,13 +16,13 @@ exports.refreshToken = async (req, res) => {
       return res.status(401).json({ message: "Invalid refresh token user" });
     }
 
-    const newAccessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const newAccessToken = jwt.sign({ id: user._id }, process.env.JWT_ACCESS_SECRET, {
       expiresIn: "15m",
     });
 
     res.json({ token: newAccessToken });
   } catch (err) {
-    console.error("Refresh token validation failed:", error);
+    console.error("Refresh token validation failed:", err);
     res.status(401).json({ message: "Invalid or expired refresh token" });
   }
 };

@@ -5,10 +5,33 @@ const api = axios.create({
   withCredentials: true,
 });
 
+
+// Request Interceptor
+api.interceptors.request.use(
+  (config) => {
+    const user = JSON.parse(localStorage.getItem("userInfo"));
+
+    if (user?.token) {
+      config.headers.Authorization = `Bearer ${user.token}`;
+    }
+
+    return config;
+  },
+  (error) => {
+    throw error; 
+  }
+);
+
+
+// Response Interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest?._retry) {
+      originalRequest._retry = true;
+
       try {
         const res = await axios.post(
           "http://localhost:5000/api/user/refresh",
@@ -20,15 +43,17 @@ api.interceptors.response.use(
         user.token = res.data.token;
         localStorage.setItem("userInfo", JSON.stringify(user));
 
-        error.config.headers.Authorization = `Bearer ${res.data.token}`;
-        return axios(error.config); // retry request
-      } catch {
+        originalRequest.headers.Authorization = `Bearer ${res.data.token}`;
+
+        return api(originalRequest); 
+      } catch (err) {
         localStorage.removeItem("userInfo");
         window.location.href = "/auth/login";
+        throw err; 
       }
     }
 
-    return Promise.reject(error);
+    throw error; 
   }
 );
 

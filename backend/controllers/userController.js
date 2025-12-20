@@ -65,8 +65,7 @@ const authUser = asyncHandler(async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      // maxAge: 7 * 24 * 60 * 60 * 1000,
-      maxAge: 2 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.json({
@@ -76,11 +75,33 @@ const authUser = asyncHandler(async (req, res) => {
       pic: user.pic,
       token: accessToken,
     });
-
   } else {
     res.status(401);
     throw new Error("Invalid email or password");
   }
 });
 
-module.exports = { registerUser, authUser };
+// controllers/userController.js
+
+const allUsers = asyncHandler(async (req, res) => {
+
+  if (!req.user) {
+    res.status(401);
+    throw new Error("Not authorized");
+  }
+
+  const search = req.query.search || "";
+
+  const users = await User.find({
+    _id: { $ne: req.user._id },
+    $or: [
+      { name: { $regex: search, $options: "i" } },
+      { email: { $regex: search, $options: "i" } },
+    ],
+  }).select("-password");
+
+  res.status(200).json(users);
+});
+
+
+module.exports = { registerUser, authUser, allUsers };

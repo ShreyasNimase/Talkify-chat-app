@@ -1,8 +1,9 @@
 const express = require("express");
-const { registerUser, authUser } = require("../controllers/userController");
+const { registerUser, authUser, allUsers } = require("../controllers/userController");
 const upload = require("../middleware/upload");
 const multer = require("multer");
 const { refreshToken } = require("../controllers/refreshController");
+const protect = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -31,6 +32,19 @@ router.post(
   registerUser
 );
 
+router.post("/logout", (req, res) => {
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+
+  res.status(200).json({ message: "Logged out successfully" });
+});
+
 router.post("/refresh", refreshToken);
+
+router.get("/", protect, allUsers);
+
 
 module.exports = router;
